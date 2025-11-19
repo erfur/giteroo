@@ -27,11 +27,12 @@
     - Support markdown rendering
 - Ability to filter by tag
 - Ability to filter by string
+- Show currently applied filter
 
 ## git features
 
 - Keep mirrored repositories on disk: /app/repositories/<user_name>/<repo_name>
-- Clone a new repository
+- Clone a new repository when it is added with the input box
 - Fetch each repository in their configured intervals
   - If not accessible, set status accordingly
   - If there is a conflict, set status accordingly

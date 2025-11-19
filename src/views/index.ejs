@@ -62,6 +62,23 @@
         <button id="applyFilters">Apply Filters</button>
         <button id="clearFilters">Clear Filters</button>
       </div>
+      <% if (filters.tag || filters.search) { %>
+        <div class="active-filters">
+          <strong>Active Filters:</strong>
+          <% if (filters.tag) { %>
+            <span class="filter-badge">
+              Tag: <%= filters.tag %>
+              <button class="filter-remove" onclick="removeFilter('tag')" title="Remove tag filter">×</button>
+            </span>
+          <% } %>
+          <% if (filters.search) { %>
+            <span class="filter-badge">
+              Search: <%= filters.search %>
+              <button class="filter-remove" onclick="removeFilter('search')" title="Remove search filter">×</button>
+            </span>
+          <% } %>
+        </div>
+      <% } %>
     </section>
 
     <section class="repositories">
@@ -141,6 +158,13 @@
       searchFilter.value = '';
       window.location.href = '/';
     });
+
+    // Remove individual filter
+    window.removeFilter = function(filterType) {
+      const params = new URLSearchParams(window.location.search);
+      params.delete(filterType);
+      window.location.href = '/?' + params.toString();
+    };
 
     // Initialize filter values from URL
     const urlParams = new URLSearchParams(window.location.search);
