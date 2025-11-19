@@ -58,7 +58,10 @@
         <label for="searchFilter">Search:</label>
         <input type="text" id="searchFilter" placeholder="Search repositories">
       </div>
-      <button id="clearFilters">Clear Filters</button>
+      <div class="filter-actions">
+        <button id="applyFilters">Apply Filters</button>
+        <button id="clearFilters">Clear Filters</button>
+      </div>
     </section>
 
     <section class="repositories">
@@ -117,8 +120,22 @@
       window.location.href = '/?' + params.toString();
     }
 
-    tagFilter.addEventListener('input', applyFilters);
-    searchFilter.addEventListener('input', applyFilters);
+    const applyFiltersBtn = document.getElementById('applyFilters');
+    
+    applyFiltersBtn.addEventListener('click', applyFilters);
+    
+    tagFilter.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        applyFilters();
+      }
+    });
+    
+    searchFilter.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        applyFilters();
+      }
+    });
+    
     clearFiltersBtn.addEventListener('click', () => {
       tagFilter.value = '';
       searchFilter.value = '';
