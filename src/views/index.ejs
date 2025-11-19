@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>giteroo - Git Repository Backup Tracker</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
+
 <body>
   <div class="container">
     <header>
@@ -18,21 +20,22 @@
       <form id="addRepoForm">
         <div class="form-group">
           <label for="repoUrl">Repository URL</label>
-          <textarea id="repoUrl" name="url" rows="3" placeholder="https://github.com/username/repo.git or git@github.com:username/repo.git" required></textarea>
+          <textarea id="repoUrl" name="url" rows="3"
+            placeholder="https://github.com/username/repo.git or git@github.com:username/repo.git" required></textarea>
         </div>
-        
+
         <div class="form-group">
           <label>
             <input type="checkbox" id="bulkMode" name="bulk">
             Enable bulk add (one URL per line)
           </label>
         </div>
-        
+
         <div class="form-group">
           <label for="tags">Tags (comma-separated)</label>
           <input type="text" id="tags" name="tags" placeholder="tag1, tag2, tag3">
         </div>
-        
+
         <div class="form-group">
           <label for="backupInterval">Backup Interval</label>
           <select id="backupInterval" name="backup_interval">
@@ -43,7 +46,7 @@
             <option value="1w">1 week</option>
           </select>
         </div>
-        
+
         <button type="submit">Add Repository</button>
       </form>
     </section>
@@ -68,29 +71,30 @@
           <% if (filters.tag) { %>
             <span class="filter-badge">
               Tag: <%= filters.tag %>
-              <button class="filter-remove" onclick="removeFilter('tag')" title="Remove tag filter">×</button>
+                <button class="filter-remove" onclick="removeFilter('tag')" title="Remove tag filter">×</button>
             </span>
-          <% } %>
-          <% if (filters.search) { %>
-            <span class="filter-badge">
-              Search: <%= filters.search %>
-              <button class="filter-remove" onclick="removeFilter('search')" title="Remove search filter">×</button>
-            </span>
-          <% } %>
+            <% } %>
+              <% if (filters.search) { %>
+                <span class="filter-badge">
+                  Search: <%= filters.search %>
+                    <button class="filter-remove" onclick="removeFilter('search')"
+                      title="Remove search filter">×</button>
+                </span>
+                <% } %>
         </div>
-      <% } %>
+        <% } %>
     </section>
 
     <section class="repositories">
       <h2>Repositories</h2>
       <div id="repositoriesList">
-        <% repositories.forEach(repo => { %>
+        <% repositories.forEach(repo=> { %>
           <%- include('partials/repository-widget', { repo: repo }) %>
-        <% }); %>
+            <% }); %>
       </div>
-      <% if (repositories.length === 0) { %>
+      <% if (repositories.length===0) { %>
         <p class="empty">No repositories found. Add one above to get started.</p>
-      <% } %>
+        <% } %>
     </section>
   </div>
 
@@ -138,21 +142,21 @@
     }
 
     const applyFiltersBtn = document.getElementById('applyFilters');
-    
+
     applyFiltersBtn.addEventListener('click', applyFilters);
-    
+
     tagFilter.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         applyFilters();
       }
     });
-    
+
     searchFilter.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         applyFilters();
       }
     });
-    
+
     clearFiltersBtn.addEventListener('click', () => {
       tagFilter.value = '';
       searchFilter.value = '';
@@ -160,7 +164,7 @@
     });
 
     // Remove individual filter
-    window.removeFilter = function(filterType) {
+    window.removeFilter = function (filterType) {
       const params = new URLSearchParams(window.location.search);
       params.delete(filterType);
       window.location.href = '/?' + params.toString();
@@ -271,5 +275,5 @@
     };
   </script>
 </body>
-</html>
 
+</html>

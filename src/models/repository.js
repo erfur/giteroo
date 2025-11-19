@@ -132,7 +132,7 @@ function create(data) {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
     
-    stmt.run([
+    stmt.bind([
       data.remote_url,
       data.username,
       data.repo_name,
@@ -141,17 +141,20 @@ function create(data) {
       data.enabled !== false ? 1 : 0
     ]);
     
+    stmt.step();
     stmt.free();
-    saveDatabase();
     
-    const idStmt = db.prepare('SELECT last_insert_rowid() as id');
-    idStmt.step();
-    const id = idStmt.getAsObject().id;
-    idStmt.free();
+    const idResult = db.exec('SELECT last_insert_rowid() as id');
+    let id = null;
+    if (idResult && idResult.length > 0 && idResult[0].values.length > 0) {
+      id = idResult[0].values[0][0];
+    }
     
-    if (!id) {
+    if (!id || id === 0) {
       throw new Error('Failed to get inserted repository ID');
     }
+    
+    saveDatabase();
     
     const repo = getById(id);
     if (!repo) {
@@ -208,7 +211,8 @@ function update(id, data) {
   
   params.push(id);
   const stmt = db.prepare(`UPDATE repositories SET ${updates.join(', ')} WHERE id = ?`);
-  stmt.run(params);
+  stmt.bind(params);
+  stmt.step();
   stmt.free();
   saveDatabase();
   
@@ -217,7 +221,8 @@ function update(id, data) {
 
 function remove(id) {
   const stmt = db.prepare('DELETE FROM repositories WHERE id = ?');
-  stmt.run([id]);
+  stmt.bind([id]);
+  stmt.step();
   stmt.free();
   saveDatabase();
   return true;
