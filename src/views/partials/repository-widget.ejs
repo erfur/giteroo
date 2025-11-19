@@ -1,0 +1,34 @@
+<div class="repository-widget" data-repo-id="<%= repo.id %>">
+  <div class="repo-header">
+    <h3><%= repo.username %>/<%= repo.repo_name %></h3>
+    <span class="status status-<%= repo.last_status %>">
+      <%= repo.last_status %>
+    </span>
+  </div>
+  
+  <div class="repo-info">
+    <p class="remote-url"><strong>Remote:</strong> <%= repo.remote_url %></p>
+    <% if (repo.tags) { %>
+      <p class="tags"><strong>Tags:</strong> <%= repo.tags %></p>
+    <% } %>
+    <p class="interval"><strong>Backup Interval:</strong> <%= repo.backup_interval %></p>
+    <% if (repo.last_backup_at) { %>
+      <p class="last-backup"><strong>Last Backup:</strong> <%= new Date(repo.last_backup_at).toLocaleString() %></p>
+    <% } %>
+  </div>
+  
+  <div class="repo-actions">
+    <button onclick="downloadSnapshot(<%= repo.id %>, 'zip')" class="btn btn-secondary">Download ZIP</button>
+    <button onclick="downloadSnapshot(<%= repo.id %>, 'tar.gz')" class="btn btn-secondary">Download TAR.GZ</button>
+    <button onclick="toggleSync(<%= repo.id %>)" class="btn btn-<%= repo.enabled ? 'warning' : 'success' %>">
+      <%= repo.enabled ? 'Disable' : 'Enable' %> Sync
+    </button>
+    <button onclick="runBackup(<%= repo.id %>)" class="btn btn-primary">Backup Now</button>
+    <button onclick="reclone(<%= repo.id %>)" class="btn btn-warning">Reclone</button>
+    <button onclick="removeRepo(<%= repo.id %>)" class="btn btn-danger">Remove</button>
+    <button onclick="toggleReadme(<%= repo.id %>, this)" class="btn btn-info">Show README</button>
+  </div>
+  
+  <div id="readme-<%= repo.id %>" class="readme-content" style="display: none;"></div>
+</div>
+

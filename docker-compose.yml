@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  giteroo:
+    build: .
+    container_name: giteroo
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./repositories:/app/repositories
+      - ./logs:/app/logs
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      - REPOSITORIES_DIR=/app/repositories
+      - LOGS_DIR=/app/logs
+      - DB_PATH=/app/data/giteroo.db
+    restart: unless-stopped
+

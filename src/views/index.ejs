@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>giteroo - Git Repository Backup Tracker</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>giteroo</h1>
+      <p class="subtitle">Self-hosted git repository backup tracker</p>
+    </header>
+
+    <section class="add-repository">
+      <h2>Add Repository</h2>
+      <form id="addRepoForm">
+        <div class="form-group">
+          <label for="repoUrl">Repository URL</label>
+          <textarea id="repoUrl" name="url" rows="3" placeholder="https://github.com/username/repo.git or git@github.com:username/repo.git" required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="bulkMode" name="bulk">
+            Enable bulk add (one URL per line)
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label for="tags">Tags (comma-separated)</label>
+          <input type="text" id="tags" name="tags" placeholder="tag1, tag2, tag3">
+        </div>
+        
+        <div class="form-group">
+          <label for="backupInterval">Backup Interval</label>
+          <select id="backupInterval" name="backup_interval">
+            <option value="15m">15 minutes</option>
+            <option value="1h">1 hour</option>
+            <option value="6h">6 hours</option>
+            <option value="1d" selected>1 day</option>
+            <option value="1w">1 week</option>
+          </select>
+        </div>
+        
+        <button type="submit">Add Repository</button>
+      </form>
+    </section>
+
+    <section class="filters">
+      <h2>Filters</h2>
+      <div class="filter-group">
+        <label for="tagFilter">Filter by Tag:</label>
+        <input type="text" id="tagFilter" placeholder="Enter tag">
+      </div>
+      <div class="filter-group">
+        <label for="searchFilter">Search:</label>
+        <input type="text" id="searchFilter" placeholder="Search repositories">
+      </div>
+      <button id="clearFilters">Clear Filters</button>
+    </section>
+
+    <section class="repositories">
+      <h2>Repositories</h2>
+      <div id="repositoriesList">
+        <% repositories.forEach(repo => { %>
+          <%- include('partials/repository-widget', { repo: repo }) %>
+        <% }); %>
+      </div>
+      <% if (repositories.length === 0) { %>
+        <p class="empty">No repositories found. Add one above to get started.</p>
+      <% } %>
+    </section>
+  </div>
+
+  <script>
+    const addRepoForm = document.getElementById('addRepoForm');
+    const tagFilter = document.getElementById('tagFilter');
+    const searchFilter = document.getElementById('searchFilter');
+    const clearFiltersBtn = document.getElementById('clearFilters');
+
+    addRepoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(addRepoForm);
+      const data = {
+        url: formData.get('url'),
+        tags: formData.get('tags'),
+        backup_interval: formData.get('backup_interval'),
+        bulk: formData.get('bulk') === 'on'
+      };
+
+      try {
+        const response = await fetch('/api/repositories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          location.reload();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    });
+
+    function applyFilters() {
+      const tag = tagFilter.value.trim();
+      const search = searchFilter.value.trim();
+      const params = new URLSearchParams();
+      if (tag) params.append('tag', tag);
+      if (search) params.append('search', search);
+      window.location.href = '/?' + params.toString();
+    }
+
+    tagFilter.addEventListener('input', applyFilters);
+    searchFilter.addEventListener('input', applyFilters);
+    clearFiltersBtn.addEventListener('click', () => {
+      tagFilter.value = '';
+      searchFilter.value = '';
+      window.location.href = '/';
+    });
+
+    // Initialize filter values from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tag')) tagFilter.value = urlParams.get('tag');
+    if (urlParams.get('search')) searchFilter.value = urlParams.get('search');
+
+    // Repository widget actions
+    window.toggleSync = async (repoId) => {
+      try {
+        const response = await fetch(`/api/repositories/${repoId}/toggle`, {
+          method: 'POST'
+        });
+        const result = await response.json();
+        if (response.ok) {
+          location.reload();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.runBackup = async (repoId) => {
+      try {
+        const response = await fetch(`/api/repositories/${repoId}/backup`, {
+          method: 'POST'
+        });
+        const result = await response.json();
+        if (response.ok) {
+          alert('Backup started');
+          setTimeout(() => location.reload(), 1000);
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.reclone = async (repoId) => {
+      if (!confirm('This will remove the local repository and clone it again. Continue?')) {
+        return;
+      }
+      try {
+        const response = await fetch(`/api/repositories/${repoId}/reclone`, {
+          method: 'POST'
+        });
+        const result = await response.json();
+        if (response.ok) {
+          alert('Reclone started');
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.removeRepo = async (repoId) => {
+      if (!confirm('Are you sure you want to remove this repository?')) {
+        return;
+      }
+      try {
+        const response = await fetch(`/api/repositories/${repoId}`, {
+          method: 'DELETE'
+        });
+        const result = await response.json();
+        if (response.ok) {
+          location.reload();
+        } else {
+          alert('Error: ' + result.error);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    window.downloadSnapshot = (repoId, format) => {
+      window.location.href = `/api/repositories/${repoId}/snapshot?format=${format}`;
+    };
+
+    window.toggleReadme = async (repoId, button) => {
+      const readmeDiv = document.getElementById(`readme-${repoId}`);
+      if (readmeDiv.style.display === 'none' || !readmeDiv.style.display) {
+        try {
+          const response = await fetch(`/api/repositories/${repoId}/readme`);
+          const result = await response.json();
+          if (response.ok) {
+            readmeDiv.innerHTML = result.html;
+            readmeDiv.style.display = 'block';
+            button.textContent = 'Hide README';
+          } else {
+            alert('README not found');
+          }
+        } catch (error) {
+          alert('Error: ' + error.message);
+        }
+      } else {
+        readmeDiv.style.display = 'none';
+        button.textContent = 'Show README';
+      }
+    };
+  </script>
+</body>
+</html>
+
