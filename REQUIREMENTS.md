@@ -6,6 +6,11 @@
 - Async calls to keep the interface responsive
 - Show total entry count
 - Notification-like non-invasive erorr popups
+- page layout
+  - link input
+  - log box
+  - filters
+  - repository list
 - Log box
   - Mirror backend logs
   - filterable by severity

@@ -17,12 +17,14 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/', require('./routes/index'));
 app.use('/api', require('./routes/api'));
 
+let server;
+
 async function start() {
   try {
     await repositoryModel.initDatabase();
     scheduler.initializeScheduler();
     
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
     });
   } catch (error) {
@@ -30,6 +32,30 @@ async function start() {
     process.exit(1);
   }
 }
+
+function gracefulShutdown() {
+  logger.info('Received shutdown signal, starting graceful shutdown...');
+  
+  scheduler.shutdown();
+  
+  if (server) {
+    server.close(() => {
+      logger.info('HTTP server closed');
+      process.exit(0);
+    });
+    
+    // Force shutdown after 10 seconds
+    setTimeout(() => {
+      logger.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  } else {
+    process.exit(0);
+  }
+}
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 start();
 

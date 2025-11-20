@@ -8,6 +8,10 @@ const repositoryModel = require('../models/repository');
 
 const REPOSITORIES_DIR = process.env.REPOSITORIES_DIR || '/app/repositories';
 
+// Track in-flight operations for shutdown handling
+const inFlightOperations = new Set();
+let isShuttingDown = false;
+
 function getRepositoryPath(username, repoName) {
   // Ensure path is within REPOSITORIES_DIR to prevent path traversal
   const safePath = path.join(REPOSITORIES_DIR, username, repoName);
@@ -29,8 +33,15 @@ function ensureDirectoryExists(dirPath) {
 
 async function cloneRepository(repoId, remoteUrl, username, repoName) {
   const repoPath = getRepositoryPath(username, repoName);
+  const operationId = `clone-${repoId}`;
   
   try {
+    if (isShuttingDown) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      throw new Error('Operation interrupted due to shutdown');
+    }
+    
+    inFlightOperations.add(operationId);
     repositoryModel.update(repoId, { last_status: 'cloning' });
     
     ensureDirectoryExists(path.dirname(repoPath));
@@ -39,8 +50,18 @@ async function cloneRepository(repoId, remoteUrl, username, repoName) {
       throw new Error('Repository directory already exists');
     }
     
+    if (isShuttingDown) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      throw new Error('Operation interrupted due to shutdown');
+    }
+    
     const git = simpleGit();
     await git.clone(remoteUrl, repoPath);
+    
+    if (isShuttingDown) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      throw new Error('Operation interrupted due to shutdown');
+    }
     
     repositoryModel.update(repoId, {
       last_status: 'success',
@@ -50,24 +71,47 @@ async function cloneRepository(repoId, remoteUrl, username, repoName) {
     logger.info(`Cloned repository: ${username}/${repoName}`);
     return { success: true };
   } catch (error) {
-    logger.error(`Failed to clone repository ${username}/${repoName}:`, error);
-    repositoryModel.update(repoId, { last_status: 'error' });
+    if (isShuttingDown && !error.message.includes('interrupted')) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+    } else if (!isShuttingDown) {
+      logger.error(`Failed to clone repository ${username}/${repoName}:`, error);
+      repositoryModel.update(repoId, { last_status: 'error' });
+    }
     throw error;
+  } finally {
+    inFlightOperations.delete(operationId);
   }
 }
 
 async function fetchRepository(repoId, username, repoName) {
   const repoPath = getRepositoryPath(username, repoName);
+  const operationId = `fetch-${repoId}`;
   
   try {
+    if (isShuttingDown) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      throw new Error('Operation interrupted due to shutdown');
+    }
+    
     if (!fs.existsSync(repoPath)) {
       throw new Error('Repository directory does not exist');
     }
     
+    inFlightOperations.add(operationId);
     repositoryModel.update(repoId, { last_status: 'fetching' });
+    
+    if (isShuttingDown) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      throw new Error('Operation interrupted due to shutdown');
+    }
     
     const git = simpleGit(repoPath);
     await git.fetch();
+    
+    if (isShuttingDown) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      throw new Error('Operation interrupted due to shutdown');
+    }
     
     const status = await git.status();
     
@@ -88,20 +132,38 @@ async function fetchRepository(repoId, username, repoName) {
     logger.info(`Fetched repository: ${username}/${repoName}`);
     return { success: true };
   } catch (error) {
-    logger.error(`Failed to fetch repository ${username}/${repoName}:`, error);
-    repositoryModel.update(repoId, { last_status: 'error' });
+    if (isShuttingDown && !error.message.includes('interrupted')) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+    } else if (!isShuttingDown) {
+      logger.error(`Failed to fetch repository ${username}/${repoName}:`, error);
+      repositoryModel.update(repoId, { last_status: 'error' });
+    }
     throw error;
+  } finally {
+    inFlightOperations.delete(operationId);
   }
 }
 
 async function recloneRepository(repoId, remoteUrl, username, repoName) {
   const repoPath = getRepositoryPath(username, repoName);
+  const operationId = `reclone-${repoId}`;
   
   try {
+    if (isShuttingDown) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      throw new Error('Operation interrupted due to shutdown');
+    }
+    
+    inFlightOperations.add(operationId);
     repositoryModel.update(repoId, { last_status: 'recloning' });
     
     if (fs.existsSync(repoPath)) {
       fs.rmSync(repoPath, { recursive: true, force: true });
+    }
+    
+    if (isShuttingDown) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      throw new Error('Operation interrupted due to shutdown');
     }
     
     await cloneRepository(repoId, remoteUrl, username, repoName);
@@ -109,9 +171,15 @@ async function recloneRepository(repoId, remoteUrl, username, repoName) {
     logger.info(`Recloned repository: ${username}/${repoName}`);
     return { success: true };
   } catch (error) {
-    logger.error(`Failed to reclone repository ${username}/${repoName}:`, error);
-    repositoryModel.update(repoId, { last_status: 'error' });
+    if (isShuttingDown && !error.message.includes('interrupted')) {
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+    } else if (!isShuttingDown) {
+      logger.error(`Failed to reclone repository ${username}/${repoName}:`, error);
+      repositoryModel.update(repoId, { last_status: 'error' });
+    }
     throw error;
+  } finally {
+    inFlightOperations.delete(operationId);
   }
 }
 
@@ -218,6 +286,24 @@ async function getLastCommitTime(username, repoName) {
   }
 }
 
+function shutdown() {
+  isShuttingDown = true;
+  logger.info('Shutting down git service...');
+  
+  // Mark all in-flight operations as interrupted
+  inFlightOperations.forEach(operationId => {
+    const match = operationId.match(/^(clone|fetch|reclone)-(\d+)$/);
+    if (match) {
+      const repoId = parseInt(match[2]);
+      repositoryModel.update(repoId, { last_status: 'interrupted' });
+      logger.info(`Marked in-flight operation ${operationId} as interrupted`);
+    }
+  });
+  
+  logger.info(`Marked ${inFlightOperations.size} in-flight operation(s) as interrupted`);
+  logger.info('Git service shut down complete');
+}
+
 module.exports = {
   cloneRepository,
   fetchRepository,
@@ -225,6 +311,7 @@ module.exports = {
   createSnapshot,
   getReadme,
   getRepositoryPath,
-  getLastCommitTime
+  getLastCommitTime,
+  shutdown
 };
 

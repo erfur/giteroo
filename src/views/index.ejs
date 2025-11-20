@@ -46,6 +46,22 @@
       </form>
     </section>
 
+    <section class="log-box">
+      <div class="log-box-header">
+        <h2>Logs</h2>
+        <div class="log-controls">
+          <div class="log-filters">
+            <label><input type="checkbox" id="filterError" checked> Error</label>
+            <label><input type="checkbox" id="filterWarning" checked> Warning</label>
+            <label><input type="checkbox" id="filterInfo" checked> Info</label>
+            <label><input type="checkbox" id="filterSuccess" checked> Success</label>
+          </div>
+          <button id="clearLogs" class="btn btn-secondary">Clear</button>
+        </div>
+      </div>
+      <div id="logContent" class="log-content"></div>
+    </section>
+
     <section class="filters">
       <h2>Filters</h2>
       <div class="filter-group">
@@ -78,22 +94,6 @@
                 <% } %>
         </div>
         <% } %>
-    </section>
-
-    <section class="log-box">
-      <div class="log-box-header">
-        <h2>Logs</h2>
-        <div class="log-controls">
-          <div class="log-filters">
-            <label><input type="checkbox" id="filterError" checked> Error</label>
-            <label><input type="checkbox" id="filterWarning" checked> Warning</label>
-            <label><input type="checkbox" id="filterInfo" checked> Info</label>
-            <label><input type="checkbox" id="filterSuccess" checked> Success</label>
-          </div>
-          <button id="clearLogs" class="btn btn-secondary">Clear</button>
-        </div>
-      </div>
-      <div id="logContent" class="log-content"></div>
     </section>
 
     <div id="notificationContainer" class="notification-container"></div>

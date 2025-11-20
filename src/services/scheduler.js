@@ -71,6 +71,7 @@ function shutdown() {
   isShuttingDown = true;
   logger.info('Shutting down scheduler...');
   
+  // Stop all scheduled jobs and mark as interrupted
   jobs.forEach((job, jobId) => {
     job.stop();
     const repoId = parseInt(jobId.replace('repo-', ''));
@@ -78,11 +79,12 @@ function shutdown() {
   });
   
   jobs.clear();
+  
+  // Shutdown git service to mark in-flight operations as interrupted
+  gitService.shutdown();
+  
   logger.info('Scheduler shut down complete');
 }
-
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
 
 module.exports = {
   scheduleRepository,
