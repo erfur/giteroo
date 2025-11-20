@@ -3,13 +3,20 @@
 ## web interface
 
 - Single page web interface.
+- Async calls to keep the interface responsive
+- Show total entry count
+- Notification-like non-invasive erorr popups
+- Log box
+  - Mirror backend logs
+  - filterable by severity
 - Link input box
-  - Toggle to enable bulk add
+  - Allows bulk add
   - Tags
   - backup interval selector
     - options: 15m, 1h, 6h, 1d, 1w
+  - If a repository already exists, show a popup and do nothing
 - Repository widget:
-  - remote address
+  - remote address (as clickable link if its a url)
   - user name
   - repository name
   - Display last backup status on each repository
@@ -25,8 +32,11 @@
       - Should remove the current local repository and clone the remote repository
   - If the repository includes a README.md/readme.md file, add a toggle button to display the readme
     - Support markdown rendering
-- Ability to filter by tag
-- Ability to filter by string
+  - Show the time of the last commit, for example: "1h ago"
+- Ability to filter
+  - by tag
+  - by string
+  - show the filtered entry count
 - Show currently applied filter
 
 ## git features

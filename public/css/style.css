@@ -99,6 +99,14 @@ section h2 {
   font-family: monospace;
 }
 
+.form-hint {
+  display: block;
+  margin-top: 5px;
+  color: var(--base0);
+  font-size: 0.85em;
+  font-style: italic;
+}
+
 .form-group input[type="checkbox"] {
   margin-right: 8px;
 }
@@ -212,6 +220,33 @@ button[type="submit"] {
   border-radius: 3px;
 }
 
+.repositories-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.repositories-header h2 {
+  margin-bottom: 0;
+}
+
+.repository-count {
+  color: var(--base0);
+  font-size: 0.9em;
+}
+
+.repository-count .count-text {
+  color: var(--base00);
+}
+
+.repository-count strong {
+  color: var(--base01);
+  font-weight: 600;
+}
+
 .repository-widget {
   background-color: var(--base2);
   border: 1px solid var(--base1);
@@ -283,6 +318,15 @@ button[type="submit"] {
 
 .repo-info strong {
   color: var(--base01);
+}
+
+.repo-info a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.repo-info a:hover {
+  text-decoration: underline;
 }
 
 .repo-actions {
@@ -386,4 +430,178 @@ button[type="submit"] {
   color: var(--base0);
   padding: 40px;
   font-style: italic;
+}
+
+.log-box {
+  background-color: var(--base3);
+  border: 1px solid var(--base1);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.log-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.log-box-header h2 {
+  margin-bottom: 0;
+}
+
+.log-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.log-filters {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.log-filters label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9em;
+  color: var(--base00);
+  cursor: pointer;
+}
+
+.log-filters input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.log-content {
+  background-color: var(--base03);
+  color: var(--base0);
+  padding: 15px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  max-height: 300px;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+
+.log-entry {
+  margin-bottom: 5px;
+  padding: 3px 0;
+}
+
+.log-entry.log-error {
+  color: var(--red);
+}
+
+.log-entry.log-warning {
+  color: var(--yellow);
+}
+
+.log-entry.log-info {
+  color: var(--base0);
+}
+
+.log-entry.log-success {
+  color: var(--green);
+}
+
+.log-time {
+  color: var(--base01);
+  margin-right: 10px;
+}
+
+.log-message {
+  word-wrap: break-word;
+}
+
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 400px;
+}
+
+.notification {
+  background-color: var(--base2);
+  border: 1px solid var(--base1);
+  border-radius: 4px;
+  padding: 12px 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  animation: slideIn 0.3s ease-out;
+  transition: opacity 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification-error {
+  border-left: 4px solid var(--red);
+  background-color: var(--base2);
+}
+
+.notification-warning {
+  border-left: 4px solid var(--yellow);
+  background-color: var(--base2);
+}
+
+.notification-info {
+  border-left: 4px solid var(--blue);
+  background-color: var(--base2);
+}
+
+.notification-success {
+  border-left: 4px solid var(--green);
+  background-color: var(--base2);
+}
+
+.notification-message {
+  flex: 1;
+  color: var(--base00);
+  font-size: 0.9em;
+  word-wrap: break-word;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: var(--base01);
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.notification-close:hover {
+  color: var(--base00);
 }

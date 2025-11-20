@@ -1,22 +1,44 @@
 <div class="repository-widget" data-repo-id="<%= repo.id %>">
   <div class="repo-header">
-    <h3><%= repo.username %>/<%= repo.repo_name %></h3>
+    <h3>
+      <%= repo.username %>/<%= repo.repo_name %>
+    </h3>
     <span class="status status-<%= repo.last_status %>">
       <%= repo.last_status %>
     </span>
   </div>
-  
+
   <div class="repo-info">
-    <p class="remote-url"><strong>Remote:</strong> <%= repo.remote_url %></p>
+    <p class="remote-url">
+      <strong>Remote:</strong>
+      <% const isUrl=repo.remote_url && (repo.remote_url.startsWith('http://') || repo.remote_url.startsWith('https://')
+        || repo.remote_url.startsWith('git@')); if (isUrl) { %>
+        <a href="<%= repo.remote_url %>" target="_blank" rel="noopener noreferrer">
+          <%= repo.remote_url %>
+        </a>
+        <% } else { %>
+          <%= repo.remote_url %>
+            <% } %>
+    </p>
     <% if (repo.tags) { %>
-      <p class="tags"><strong>Tags:</strong> <%= repo.tags %></p>
-    <% } %>
-    <p class="interval"><strong>Backup Interval:</strong> <%= repo.backup_interval %></p>
-    <% if (repo.last_backup_at) { %>
-      <p class="last-backup"><strong>Last Backup:</strong> <%= new Date(repo.last_backup_at).toLocaleString() %></p>
-    <% } %>
+      <p class="tags"><strong>Tags:</strong>
+        <%= repo.tags %>
+      </p>
+      <% } %>
+        <p class="interval"><strong>Backup Interval:</strong>
+          <%= repo.backup_interval %>
+        </p>
+        <% if (repo.last_backup_at) { %>
+          <p class="last-backup"><strong>Last Backup:</strong>
+            <%= new Date(repo.last_backup_at).toLocaleString() %>
+          </p>
+          <% } %>
+            <% if (repo.last_commit_time) { %>
+              <p class="last-commit"><strong>Last Commit:</strong> <span class="relative-time"
+                  data-time="<%= repo.last_commit_time.toISOString() %>">Loading...</span></p>
+              <% } %>
   </div>
-  
+
   <div class="repo-actions">
     <button onclick="downloadSnapshot(<%= repo.id %>, 'zip')" class="btn btn-secondary">Download ZIP</button>
     <button onclick="downloadSnapshot(<%= repo.id %>, 'tar.gz')" class="btn btn-secondary">Download TAR.GZ</button>
@@ -28,7 +50,6 @@
     <button onclick="removeRepo(<%= repo.id %>)" class="btn btn-danger">Remove</button>
     <button onclick="toggleReadme(<%= repo.id %>, this)" class="btn btn-info">Show README</button>
   </div>
-  
+
   <div id="readme-<%= repo.id %>" class="readme-content" style="display: none;"></div>
 </div>
-

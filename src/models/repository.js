@@ -99,6 +99,14 @@ function getAll(filters = {}) {
   return results;
 }
 
+function getTotalCount() {
+  const stmt = db.prepare('SELECT COUNT(*) as count FROM repositories');
+  stmt.step();
+  const result = stmt.getAsObject();
+  stmt.free();
+  return result ? result.count : 0;
+}
+
 function getById(id) {
   const stmt = db.prepare('SELECT * FROM repositories WHERE id = ?');
   stmt.bind([id]);
@@ -125,8 +133,22 @@ function getById(id) {
   };
 }
 
+function existsByUsernameAndRepo(username, repoName) {
+  const stmt = db.prepare('SELECT id FROM repositories WHERE username = ? AND repo_name = ?');
+  stmt.bind([username, repoName]);
+  
+  const exists = stmt.step();
+  stmt.free();
+  
+  return exists;
+}
+
 function create(data) {
   try {
+    if (existsByUsernameAndRepo(data.username, data.repo_name)) {
+      throw new Error('Repository already exists');
+    }
+    
     const stmt = db.prepare(`
       INSERT INTO repositories (remote_url, username, repo_name, tags, backup_interval, enabled)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -234,6 +256,8 @@ module.exports = {
   getById,
   create,
   update,
-  remove
+  remove,
+  existsByUsernameAndRepo,
+  getTotalCount
 };
 

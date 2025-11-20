@@ -8,6 +8,7 @@ const logger = require('../services/logger');
 const { marked } = require('marked');
 const path = require('path');
 const fs = require('fs');
+const readline = require('readline');
 
 router.post('/repositories', async (req, res) => {
   try {
@@ -28,6 +29,17 @@ router.post('/repositories', async (req, res) => {
     for (const repoUrl of urls) {
       try {
         const { username, repoName } = parseGitUrl(repoUrl.trim());
+
+        if (repositoryModel.existsByUsernameAndRepo(username, repoName)) {
+          results.push({
+            error: 'Repository already exists',
+            url: repoUrl,
+            duplicate: true,
+            username,
+            repoName
+          });
+          continue;
+        }
 
         const repo = repositoryModel.create({
           remote_url: repoUrl.trim(),
@@ -75,6 +87,22 @@ router.get('/repositories', (req, res) => {
     res.json(repositories);
   } catch (error) {
     logger.error('Failed to get repositories:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/repositories/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const repo = repositoryModel.getById(id);
+
+    if (!repo) {
+      return res.status(404).json({ error: 'Repository not found' });
+    }
+
+    res.json(repo);
+  } catch (error) {
+    logger.error('Failed to get repository:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -214,6 +242,53 @@ router.get('/repositories/:id/readme', (req, res) => {
     res.json({ html });
   } catch (error) {
     logger.error('Failed to get README:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get('/logs', (req, res) => {
+  try {
+    const since = parseInt(req.query.since) || Date.now() - 60000;
+    const logsDir = process.env.LOGS_DIR || '/app/logs';
+
+    if (!fs.existsSync(logsDir)) {
+      return res.json([]);
+    }
+
+    const logFiles = fs.readdirSync(logsDir)
+      .filter(file => file.startsWith('giteroo-') && file.endsWith('.log'))
+      .map(file => path.join(logsDir, file))
+      .sort()
+      .reverse();
+
+    const logs = [];
+
+    if (logFiles.length > 0) {
+      const latestLogFile = logFiles[0];
+      const fileContent = fs.readFileSync(latestLogFile, 'utf-8');
+      const lines = fileContent.split('\n').filter(line => line.trim());
+
+      lines.forEach(line => {
+        try {
+          const logEntry = JSON.parse(line);
+          const logTime = new Date(logEntry.timestamp).getTime();
+
+          if (logTime > since) {
+            logs.push({
+              timestamp: logEntry.timestamp,
+              level: logEntry.level,
+              message: logEntry.message || logEntry.msg || JSON.stringify(logEntry)
+            });
+          }
+        } catch (e) {
+          // Skip invalid JSON lines
+        }
+      });
+    }
+
+    res.json(logs.slice(-50));
+  } catch (error) {
+    logger.error('Failed to get logs:', error);
     res.status(500).json({ error: error.message });
   }
 });

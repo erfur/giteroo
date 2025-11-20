@@ -5,15 +5,14 @@ services:
     build: .
     container_name: giteroo
     ports:
-      - "3000:3000"
+      - "8000:8000"
     volumes:
       - ./repositories:/app/repositories
       - ./logs:/app/logs
       - ./data:/app/data
     environment:
-      - PORT=3000
+      - PORT=8000
       - REPOSITORIES_DIR=/app/repositories
       - LOGS_DIR=/app/logs
       - DB_PATH=/app/data/giteroo.db
     restart: unless-stopped
-

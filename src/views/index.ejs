@@ -20,15 +20,10 @@
       <form id="addRepoForm">
         <div class="form-group">
           <label for="repoUrl">Repository URL</label>
-          <textarea id="repoUrl" name="url" rows="3"
-            placeholder="https://github.com/username/repo.git or git@github.com:username/repo.git" required></textarea>
-        </div>
-
-        <div class="form-group">
-          <label>
-            <input type="checkbox" id="bulkMode" name="bulk">
-            Enable bulk add (one URL per line)
-          </label>
+          <textarea id="repoUrl" name="url" rows="5"
+            placeholder="Enter one or more repository URLs (one per line):&#10;https://github.com/username/repo.git&#10;git@github.com:username/repo.git"
+            required></textarea>
+          <small class="form-hint">You can add multiple repositories by entering one URL per line</small>
         </div>
 
         <div class="form-group">
@@ -85,8 +80,41 @@
         <% } %>
     </section>
 
+    <section class="log-box">
+      <div class="log-box-header">
+        <h2>Logs</h2>
+        <div class="log-controls">
+          <div class="log-filters">
+            <label><input type="checkbox" id="filterError" checked> Error</label>
+            <label><input type="checkbox" id="filterWarning" checked> Warning</label>
+            <label><input type="checkbox" id="filterInfo" checked> Info</label>
+            <label><input type="checkbox" id="filterSuccess" checked> Success</label>
+          </div>
+          <button id="clearLogs" class="btn btn-secondary">Clear</button>
+        </div>
+      </div>
+      <div id="logContent" class="log-content"></div>
+    </section>
+
+    <div id="notificationContainer" class="notification-container"></div>
+
     <section class="repositories">
-      <h2>Repositories</h2>
+      <div class="repositories-header">
+        <h2>Repositories</h2>
+        <div class="repository-count">
+          <% if (filters.tag || filters.search) { %>
+            <span class="count-text">Showing <strong>
+                <%= filteredCount %>
+              </strong> of <strong>
+                <%= totalCount %>
+              </strong> repositories</span>
+            <% } else { %>
+              <span class="count-text">Total: <strong>
+                  <%= totalCount %>
+                </strong> repositories</span>
+              <% } %>
+        </div>
+      </div>
       <div id="repositoriesList">
         <% repositories.forEach(repo=> { %>
           <%- include('partials/repository-widget', { repo: repo }) %>
@@ -103,6 +131,231 @@
     const tagFilter = document.getElementById('tagFilter');
     const searchFilter = document.getElementById('searchFilter');
     const clearFiltersBtn = document.getElementById('clearFilters');
+    const logContent = document.getElementById('logContent');
+    const clearLogsBtn = document.getElementById('clearLogs');
+    const notificationContainer = document.getElementById('notificationContainer');
+
+    let activeFilters = {
+      error: true,
+      warning: true,
+      info: true,
+      success: true
+    };
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Notification system
+    function showNotification(message, type = 'info', duration = 5000) {
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.innerHTML = `
+        <span class="notification-message">${escapeHtml(message)}</span>
+        <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+      `;
+      notificationContainer.appendChild(notification);
+
+      // Force reflow to ensure animation plays
+      notification.offsetHeight;
+
+      // Auto-dismiss after duration
+      const timeoutId = setTimeout(() => {
+        if (notification.parentElement) {
+          notification.style.opacity = '0';
+          notification.style.transform = 'translateX(100%)';
+          setTimeout(() => {
+            if (notification.parentElement) {
+              notification.remove();
+            }
+          }, 300);
+        }
+      }, duration);
+
+      // Store timeout ID on notification element so it can be cleared if manually closed
+      notification._timeoutId = timeoutId;
+    }
+
+    // Update close button to clear timeout
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('notification-close')) {
+        const notification = e.target.parentElement;
+        if (notification._timeoutId) {
+          clearTimeout(notification._timeoutId);
+        }
+      }
+    });
+
+    // Load logs from sessionStorage on page load
+    function loadStoredLogs() {
+      try {
+        const storedLogs = sessionStorage.getItem('giteroo_logs');
+        if (storedLogs) {
+          const logs = JSON.parse(storedLogs);
+          logs.forEach(log => {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${log.type}`;
+            logEntry.setAttribute('data-severity', log.type);
+            // Ensure time doesn't already have brackets
+            const time = log.time.startsWith('[') && log.time.endsWith(']')
+              ? log.time.slice(1, -1)
+              : log.time;
+            logEntry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-message">${escapeHtml(log.message)}</span>`;
+            if (activeFilters[log.type]) {
+              logEntry.style.display = '';
+            } else {
+              logEntry.style.display = 'none';
+            }
+            logContent.appendChild(logEntry);
+          });
+          logContent.scrollTop = logContent.scrollHeight;
+        }
+      } catch (e) {
+        console.error('Failed to load stored logs:', e);
+      }
+    }
+
+    // Save logs to sessionStorage
+    function saveLogs() {
+      try {
+        const logs = [];
+        const entries = logContent.querySelectorAll('.log-entry');
+        entries.forEach(entry => {
+          const timeEl = entry.querySelector('.log-time');
+          const messageEl = entry.querySelector('.log-message');
+          if (timeEl && messageEl) {
+            // Extract raw timestamp (remove brackets if present)
+            let time = timeEl.textContent.trim();
+            if (time.startsWith('[') && time.endsWith(']')) {
+              time = time.slice(1, -1);
+            }
+            // Extract raw message
+            const message = messageEl.textContent;
+            const type = entry.getAttribute('data-severity');
+            logs.push({ time, message, type });
+          }
+        });
+        sessionStorage.setItem('giteroo_logs', JSON.stringify(logs.slice(-100)));
+      } catch (e) {
+        console.error('Failed to save logs:', e);
+      }
+    }
+
+    // Log box functionality
+    function addLogEntry(message, type = 'info') {
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry log-${type}`;
+      logEntry.setAttribute('data-severity', type);
+      const timestamp = new Date().toLocaleTimeString();
+      logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-message">${escapeHtml(message)}</span>`;
+
+      // Only show if filter is active
+      if (activeFilters[type]) {
+        logEntry.style.display = '';
+        logContent.appendChild(logEntry);
+        logContent.scrollTop = logContent.scrollHeight;
+      } else {
+        logEntry.style.display = 'none';
+        logContent.appendChild(logEntry);
+      }
+
+      // Keep only last 100 entries
+      while (logContent.children.length > 100) {
+        logContent.removeChild(logContent.firstChild);
+      }
+
+      // Save to sessionStorage
+      saveLogs();
+    }
+
+    // Load stored logs on page load
+    loadStoredLogs();
+
+    // Filter log entries by severity
+    function filterLogs() {
+      const entries = logContent.querySelectorAll('.log-entry');
+      entries.forEach(entry => {
+        const severity = entry.getAttribute('data-severity');
+        if (activeFilters[severity]) {
+          entry.style.display = '';
+        } else {
+          entry.style.display = 'none';
+        }
+      });
+    }
+
+    // Set up filter checkboxes
+    document.getElementById('filterError').addEventListener('change', (e) => {
+      activeFilters.error = e.target.checked;
+      filterLogs();
+    });
+    document.getElementById('filterWarning').addEventListener('change', (e) => {
+      activeFilters.warning = e.target.checked;
+      filterLogs();
+    });
+    document.getElementById('filterInfo').addEventListener('change', (e) => {
+      activeFilters.info = e.target.checked;
+      filterLogs();
+    });
+    document.getElementById('filterSuccess').addEventListener('change', (e) => {
+      activeFilters.success = e.target.checked;
+      filterLogs();
+    });
+
+    clearLogsBtn.addEventListener('click', () => {
+      logContent.innerHTML = '';
+      sessionStorage.removeItem('giteroo_logs');
+    });
+
+    // Log functions with notifications
+    window.logError = function (message) {
+      addLogEntry(message, 'error');
+      showNotification(message, 'error', 6000);
+    };
+
+    window.logInfo = function (message) {
+      addLogEntry(message, 'info');
+    };
+
+    window.logWarning = function (message) {
+      addLogEntry(message, 'warning');
+      showNotification(message, 'warning', 5000);
+    };
+
+    window.logSuccess = function (message) {
+      addLogEntry(message, 'success');
+      showNotification(message, 'success', 4000);
+    };
+
+    // Fetch logs from server periodically
+    let lastLogTimestamp = Date.now();
+    async function fetchLogs() {
+      try {
+        const response = await fetch(`/api/logs?since=${lastLogTimestamp}`);
+        if (response.ok) {
+          const logs = await response.json();
+          logs.forEach(log => {
+            if (log.message) {
+              const type = log.level === 'error' ? 'error' :
+                log.level === 'warn' ? 'warning' :
+                  log.level === 'info' ? 'info' : 'info';
+              addLogEntry(log.message, type);
+            }
+          });
+          if (logs.length > 0) {
+            lastLogTimestamp = Date.now();
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch logs:', error);
+      }
+    }
+
+    // Fetch logs every 2 seconds
+    setInterval(fetchLogs, 2000);
+    fetchLogs(); // Initial fetch
 
     addRepoForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -111,7 +364,7 @@
         url: formData.get('url'),
         tags: formData.get('tags'),
         backup_interval: formData.get('backup_interval'),
-        bulk: formData.get('bulk') === 'on'
+        bulk: true
       };
 
       try {
@@ -123,12 +376,40 @@
 
         const result = await response.json();
         if (response.ok) {
-          location.reload();
+          if (result.results && result.results.length > 0) {
+            const duplicates = result.results.filter(r => r.duplicate);
+            const errors = result.results.filter(r => r.error && !r.duplicate);
+
+            if (duplicates.length > 0) {
+              duplicates.forEach(r => {
+                const name = r.username && r.repoName ? `${r.username}/${r.repoName}` : r.url;
+                logWarning(`Repository already exists: ${name}`);
+              });
+            }
+
+            if (errors.length > 0) {
+              errors.forEach(r => {
+                logError(`${r.url}: ${r.error}`);
+              });
+            }
+
+            const successes = result.results.filter(r => !r.error && !r.duplicate);
+            if (successes.length > 0) {
+              // Only reload if there are successful additions, and delay to show notifications
+              logSuccess(`Successfully added ${successes.length} repository/repositories`);
+              setTimeout(() => {
+                location.reload();
+              }, 3000);
+            }
+            // Don't reload if there are only errors or duplicates - let notifications and logs persist
+          } else {
+            // No results, don't reload
+          }
         } else {
-          alert('Error: ' + result.error);
+          logError('Error: ' + result.error);
         }
       } catch (error) {
-        alert('Error: ' + error.message);
+        logError('Error: ' + error.message);
       }
     });
 
@@ -175,37 +456,123 @@
     if (urlParams.get('tag')) tagFilter.value = urlParams.get('tag');
     if (urlParams.get('search')) searchFilter.value = urlParams.get('search');
 
+    // Format relative time
+    function formatRelativeTime(date) {
+      const now = new Date();
+      const diffMs = now - date;
+      const diffSecs = Math.floor(diffMs / 1000);
+      const diffMins = Math.floor(diffSecs / 60);
+      const diffHours = Math.floor(diffMins / 60);
+      const diffDays = Math.floor(diffHours / 24);
+      const diffWeeks = Math.floor(diffDays / 7);
+      const diffMonths = Math.floor(diffDays / 30);
+      const diffYears = Math.floor(diffDays / 365);
+
+      if (diffSecs < 60) return 'just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      if (diffWeeks < 4) return `${diffWeeks}w ago`;
+      if (diffMonths < 12) return `${diffMonths}mo ago`;
+      return `${diffYears}y ago`;
+    }
+
+    // Update all relative times
+    function updateRelativeTimes() {
+      document.querySelectorAll('.relative-time').forEach(el => {
+        const timeStr = el.getAttribute('data-time');
+        if (timeStr) {
+          const date = new Date(timeStr);
+          el.textContent = formatRelativeTime(date);
+        }
+      });
+    }
+
+    // Update relative times on page load and periodically
+    updateRelativeTimes();
+    setInterval(updateRelativeTimes, 60000); // Update every minute
+
+    // Update repository status without reload
+    function updateRepositoryStatus(repoId, status) {
+      const widget = document.querySelector(`[data-repo-id="${repoId}"]`);
+      if (widget) {
+        const statusEl = widget.querySelector('.status');
+        if (statusEl) {
+          statusEl.className = `status status-${status}`;
+          statusEl.textContent = status;
+        }
+      }
+    }
+
     // Repository widget actions
     window.toggleSync = async (repoId) => {
+      const button = event.target;
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = '...';
+
       try {
         const response = await fetch(`/api/repositories/${repoId}/toggle`, {
           method: 'POST'
         });
         const result = await response.json();
         if (response.ok) {
-          location.reload();
+          // Update button without reload
+          const widget = document.querySelector(`[data-repo-id="${repoId}"]`);
+          if (widget) {
+            const toggleBtn = widget.querySelector('button[onclick*="toggleSync"]');
+            if (toggleBtn) {
+              toggleBtn.textContent = result.enabled ? 'Disable Sync' : 'Enable Sync';
+              toggleBtn.className = `btn btn-${result.enabled ? 'warning' : 'success'}`;
+            }
+          }
         } else {
-          alert('Error: ' + result.error);
+          logError('Error: ' + result.error);
+          button.textContent = originalText;
         }
       } catch (error) {
-        alert('Error: ' + error.message);
+        logError('Error: ' + error.message);
+        button.textContent = originalText;
+      } finally {
+        button.disabled = false;
       }
     };
 
     window.runBackup = async (repoId) => {
+      const button = event.target;
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Running...';
+
       try {
+        updateRepositoryStatus(repoId, 'fetching');
         const response = await fetch(`/api/repositories/${repoId}/backup`, {
           method: 'POST'
         });
         const result = await response.json();
         if (response.ok) {
-          alert('Backup started');
-          setTimeout(() => location.reload(), 1000);
+          // Poll for status update
+          setTimeout(async () => {
+            try {
+              const statusResponse = await fetch(`/api/repositories/${repoId}`);
+              if (statusResponse.ok) {
+                const repo = await statusResponse.json();
+                updateRepositoryStatus(repoId, repo.last_status);
+              }
+            } catch (e) {
+              console.error('Failed to update status:', e);
+            }
+          }, 2000);
         } else {
-          alert('Error: ' + result.error);
+          logError('Error: ' + result.error);
+          updateRepositoryStatus(repoId, 'error');
         }
       } catch (error) {
-        alert('Error: ' + error.message);
+        logError('Error: ' + error.message);
+        updateRepositoryStatus(repoId, 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
       }
     };
 
@@ -213,19 +580,41 @@
       if (!confirm('This will remove the local repository and clone it again. Continue?')) {
         return;
       }
+
+      const button = event.target;
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Recloning...';
+
       try {
+        updateRepositoryStatus(repoId, 'recloning');
         const response = await fetch(`/api/repositories/${repoId}/reclone`, {
           method: 'POST'
         });
         const result = await response.json();
         if (response.ok) {
-          alert('Reclone started');
-          setTimeout(() => location.reload(), 2000);
+          // Poll for status update
+          setTimeout(async () => {
+            try {
+              const statusResponse = await fetch(`/api/repositories/${repoId}`);
+              if (statusResponse.ok) {
+                const repo = await statusResponse.json();
+                updateRepositoryStatus(repoId, repo.last_status);
+              }
+            } catch (e) {
+              console.error('Failed to update status:', e);
+            }
+          }, 3000);
         } else {
-          alert('Error: ' + result.error);
+          logError('Error: ' + result.error);
+          updateRepositoryStatus(repoId, 'error');
         }
       } catch (error) {
-        alert('Error: ' + error.message);
+        logError('Error: ' + error.message);
+        updateRepositoryStatus(repoId, 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
       }
     };
 
@@ -233,18 +622,50 @@
       if (!confirm('Are you sure you want to remove this repository?')) {
         return;
       }
+
+      const button = event.target;
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Removing...';
+
       try {
         const response = await fetch(`/api/repositories/${repoId}`, {
           method: 'DELETE'
         });
         const result = await response.json();
         if (response.ok) {
-          location.reload();
+          // Remove widget from DOM without reload
+          const widget = document.querySelector(`[data-repo-id="${repoId}"]`);
+          if (widget) {
+            widget.style.opacity = '0.5';
+            setTimeout(() => {
+              widget.remove();
+              // Update counts
+              const countEl = document.querySelector('.repository-count .count-text');
+              if (countEl) {
+                const currentText = countEl.textContent;
+                const match = currentText.match(/(\d+)/);
+                if (match) {
+                  const currentCount = parseInt(match[1]);
+                  const newCount = currentCount - 1;
+                  if (countEl.textContent.includes('of')) {
+                    countEl.innerHTML = `Showing <strong>${newCount}</strong> of <strong>${newCount}</strong> repositories`;
+                  } else {
+                    countEl.innerHTML = `Total: <strong>${newCount}</strong> repositories`;
+                  }
+                }
+              }
+            }, 300);
+          }
         } else {
-          alert('Error: ' + result.error);
+          logError('Error: ' + result.error);
+          button.textContent = originalText;
         }
       } catch (error) {
-        alert('Error: ' + error.message);
+        logError('Error: ' + error.message);
+        button.textContent = originalText;
+      } finally {
+        button.disabled = false;
       }
     };
 
@@ -263,10 +684,10 @@
             readmeDiv.style.display = 'block';
             button.textContent = 'Hide README';
           } else {
-            alert('README not found');
+            logWarning('README not found');
           }
         } catch (error) {
-          alert('Error: ' + error.message);
+          logError('Error: ' + error.message);
         }
       } else {
         readmeDiv.style.display = 'none';

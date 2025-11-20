@@ -157,12 +157,35 @@ function getReadme(repoId, username, repoName) {
   return null;
 }
 
+async function getLastCommitTime(username, repoName) {
+  const repoPath = getRepositoryPath(username, repoName);
+  
+  if (!fs.existsSync(repoPath)) {
+    return null;
+  }
+  
+  try {
+    const git = simpleGit(repoPath);
+    const log = await git.log({ maxCount: 1 });
+    
+    if (log && log.latest && log.latest.date) {
+      return new Date(log.latest.date);
+    }
+    
+    return null;
+  } catch (error) {
+    logger.error(`Failed to get last commit time for ${username}/${repoName}:`, error);
+    return null;
+  }
+}
+
 module.exports = {
   cloneRepository,
   fetchRepository,
   recloneRepository,
   createSnapshot,
   getReadme,
-  getRepositoryPath
+  getRepositoryPath,
+  getLastCommitTime
 };
 
