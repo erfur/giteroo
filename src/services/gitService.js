@@ -2,13 +2,23 @@ const simpleGit = require('simple-git');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
+const { escape } = require('shell-quote');
 const logger = require('./logger');
 const repositoryModel = require('../models/repository');
 
 const REPOSITORIES_DIR = process.env.REPOSITORIES_DIR || '/app/repositories';
 
 function getRepositoryPath(username, repoName) {
-  return path.join(REPOSITORIES_DIR, username, repoName);
+  // Ensure path is within REPOSITORIES_DIR to prevent path traversal
+  const safePath = path.join(REPOSITORIES_DIR, username, repoName);
+  const resolvedPath = path.resolve(safePath);
+  const resolvedBase = path.resolve(REPOSITORIES_DIR);
+  
+  if (!resolvedPath.startsWith(resolvedBase)) {
+    throw new Error('Path traversal detected');
+  }
+  
+  return resolvedPath;
 }
 
 function ensureDirectoryExists(dirPath) {
@@ -120,16 +130,45 @@ function createSnapshot(repoId, username, repoName, format = 'zip') {
   const snapshotPath = path.join(snapshotDir, filename);
   
   try {
+    // Validate format to prevent command injection
+    if (!['zip', 'tar.gz'].includes(format)) {
+      throw new Error(`Unsupported format: ${format}`);
+    }
+    
+    // Use path operations instead of shell commands to prevent command injection
+    const parentDir = path.dirname(repoPath);
+    const safeRepoName = path.basename(repoPath);
+    const safeSnapshotPath = path.resolve(snapshotPath);
+    const safeParentDir = path.resolve(parentDir);
+    
+    // Ensure paths are safe (no path traversal)
+    if (!safeSnapshotPath.startsWith(path.resolve(REPOSITORIES_DIR, '..', 'snapshots'))) {
+      throw new Error('Invalid snapshot path');
+    }
+    if (!safeParentDir.startsWith(path.resolve(REPOSITORIES_DIR))) {
+      throw new Error('Invalid repository path');
+    }
+    
+    // Escape all arguments to prevent command injection
+    // shell-quote.escape() takes an array and returns escaped string
+    // We need to escape each argument separately
+    const escapedParentDir = escape([safeParentDir]);
+    const escapedRepoName = escape([safeRepoName]);
+    const escapedSnapshotPath = escape([safeSnapshotPath]);
+    
+    // Build command with properly escaped arguments
     if (format === 'zip') {
-      execSync(`cd "${path.dirname(repoPath)}" && zip -r "${snapshotPath}" "${repoName}"`, {
-        stdio: 'pipe'
+      const cmd = `cd ${escapedParentDir} && zip -r ${escapedSnapshotPath} ${escapedRepoName}`;
+      execSync(cmd, {
+        stdio: 'pipe',
+        shell: '/bin/bash'
       });
     } else if (format === 'tar.gz') {
-      execSync(`cd "${path.dirname(repoPath)}" && tar -czf "${snapshotPath}" "${repoName}"`, {
-        stdio: 'pipe'
+      const cmd = `cd ${escapedParentDir} && tar -czf ${escapedSnapshotPath} ${escapedRepoName}`;
+      execSync(cmd, {
+        stdio: 'pipe',
+        shell: '/bin/bash'
       });
-    } else {
-      throw new Error(`Unsupported format: ${format}`);
     }
     
     logger.info(`Created snapshot: ${filename}`);

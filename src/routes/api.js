@@ -6,9 +6,15 @@ const scheduler = require('../services/scheduler');
 const { parseGitUrl, validateBackupInterval } = require('../utils/helpers');
 const logger = require('../services/logger');
 const { marked } = require('marked');
+const DOMPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
 const path = require('path');
 const fs = require('fs');
 const readline = require('readline');
+
+// Create DOMPurify instance for server-side sanitization
+const window = new JSDOM('').window;
+const purify = DOMPurify(window);
 
 router.post('/repositories', async (req, res) => {
   try {
@@ -239,7 +245,9 @@ router.get('/repositories/:id/readme', (req, res) => {
     }
 
     const html = marked.parse(readmeContent);
-    res.json({ html });
+    // Sanitize HTML to prevent XSS attacks
+    const sanitizedHtml = purify.sanitize(html);
+    res.json({ html: sanitizedHtml });
   } catch (error) {
     logger.error('Failed to get README:', error);
     res.status(500).json({ error: error.message });

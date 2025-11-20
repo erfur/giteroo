@@ -1,3 +1,12 @@
+function sanitizePathComponent(component) {
+  // Remove path traversal sequences and dangerous characters
+  return component
+    .replace(/\.\./g, '') // Remove path traversal
+    .replace(/[\/\\]/g, '') // Remove path separators
+    .replace(/[<>:"|?*\x00-\x1f]/g, '') // Remove invalid filename characters
+    .trim();
+}
+
 function parseGitUrl(url) {
   const patterns = [
     /^https?:\/\/(?:[^@]+@)?([^\/]+)\/([^\/]+)\/([^\/]+?)(?:\.git)?$/,
@@ -8,8 +17,17 @@ function parseGitUrl(url) {
     const match = url.match(pattern);
     if (match) {
       const host = match[1];
-      const username = match[2];
-      const repoName = match[3].replace(/\.git$/, '');
+      let username = match[2];
+      let repoName = match[3].replace(/\.git$/, '');
+      
+      // Sanitize username and repoName to prevent path traversal and command injection
+      username = sanitizePathComponent(username);
+      repoName = sanitizePathComponent(repoName);
+      
+      if (!username || !repoName) {
+        throw new Error('Invalid git URL format: username or repository name is empty after sanitization');
+      }
+      
       return { username, repoName, host };
     }
   }
@@ -24,6 +42,7 @@ function validateBackupInterval(interval) {
 
 module.exports = {
   parseGitUrl,
-  validateBackupInterval
+  validateBackupInterval,
+  sanitizePathComponent
 };
 
