@@ -16,6 +16,10 @@ Self-hosted web application for tracking and backing up remote git repositories.
 - **Notifications**: Non-invasive toast notifications for errors and warnings
 - **README Display**: View repository README files with markdown rendering
 
+## Screenshot
+
+![giteroo screenshot](screenshot.png)
+
 ## Quick Start
 
 ### Docker (Recommended)
