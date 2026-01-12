@@ -522,7 +522,7 @@
           if (widget) {
             const toggleBtn = widget.querySelector('button[onclick*="toggleSync"]');
             if (toggleBtn) {
-              toggleBtn.textContent = result.enabled ? 'Disable Sync' : 'Enable Sync';
+              toggleBtn.textContent = result.enabled ? 'Pause' : 'Resume';
               toggleBtn.className = `btn btn-${result.enabled ? 'warning' : 'success'}`;
             }
           }

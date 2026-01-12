@@ -40,15 +40,21 @@
   </div>
 
   <div class="repo-actions">
-    <button onclick="downloadSnapshot(<%= repo.id %>, 'zip')" class="btn btn-secondary">Download ZIP</button>
-    <button onclick="downloadSnapshot(<%= repo.id %>, 'tar.gz')" class="btn btn-secondary">Download TAR.GZ</button>
-    <button onclick="toggleSync(<%= repo.id %>)" class="btn btn-<%= repo.enabled ? 'warning' : 'success' %>">
-      <%= repo.enabled ? 'Disable' : 'Enable' %> Sync
-    </button>
-    <button onclick="runBackup(<%= repo.id %>)" class="btn btn-primary">Backup Now</button>
-    <button onclick="reclone(<%= repo.id %>)" class="btn btn-warning">Reclone</button>
-    <button onclick="removeRepo(<%= repo.id %>)" class="btn btn-danger">Remove</button>
-    <button onclick="toggleReadme(<%= repo.id %>, this)" class="btn btn-info">Show README</button>
+    <div class="btn-group btn-group-primary">
+      <button onclick="runBackup(<%= repo.id %>)" class="btn btn-primary">Backup Now</button>
+      <button onclick="toggleReadme(<%= repo.id %>, this)" class="btn btn-info">README</button>
+    </div>
+    <div class="btn-group">
+      <button onclick="downloadSnapshot(<%= repo.id %>, 'zip')" class="btn btn-secondary">ZIP</button>
+      <button onclick="downloadSnapshot(<%= repo.id %>, 'tar.gz')" class="btn btn-secondary">TAR.GZ</button>
+    </div>
+    <div class="btn-group btn-group-actions">
+      <button onclick="toggleSync(<%= repo.id %>)" class="btn btn-<%= repo.enabled ? 'warning' : 'success' %>">
+        <%= repo.enabled ? 'Pause' : 'Resume' %>
+      </button>
+      <button onclick="reclone(<%= repo.id %>)" class="btn btn-warning">Reclone</button>
+      <button onclick="removeRepo(<%= repo.id %>)" class="btn btn-danger">Remove</button>
+    </div>
   </div>
 
   <div id="readme-<%= repo.id %>" class="readme-content" style="display: none;"></div>
