@@ -273,7 +273,42 @@ async function getLastCommitTime(username, repoName) {
   
   try {
     const git = simpleGit(repoPath);
-    const log = await git.log({ maxCount: 1 });
+    
+    // Get the remote HEAD reference to find the default branch
+    const remotes = await git.getRemotes(true);
+    if (!remotes || remotes.length === 0) {
+      return null;
+    }
+    
+    // Try to get the log from the remote tracking branch
+    // First, try to find the default branch from remote HEAD
+    let remoteBranch = null;
+    try {
+      const symbolicRef = await git.raw(['symbolic-ref', 'refs/remotes/origin/HEAD']);
+      remoteBranch = symbolicRef.trim().replace('refs/remotes/', '');
+    } catch {
+      // If symbolic-ref fails, try common branch names
+      const branches = await git.branch(['-r']);
+      const remoteBranches = branches.all;
+      
+      for (const branch of ['origin/main', 'origin/master']) {
+        if (remoteBranches.includes(branch)) {
+          remoteBranch = branch;
+          break;
+        }
+      }
+      
+      // Fallback to first available remote branch
+      if (!remoteBranch && remoteBranches.length > 0) {
+        remoteBranch = remoteBranches.find(b => !b.includes('HEAD'));
+      }
+    }
+    
+    if (!remoteBranch) {
+      return null;
+    }
+    
+    const log = await git.log([remoteBranch, '-1']);
     
     if (log && log.latest && log.latest.date) {
       return new Date(log.latest.date);
