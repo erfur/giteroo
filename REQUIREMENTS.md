@@ -25,9 +25,6 @@
   - user name
   - repository name
   - Display last backup status on each repository
-    - Use red color for failed backup
-    - Use green color for succesful backup
-    - Use solarized colors for statuses
   - Buttons
     - download snapshot as zip or tar.gz archive
     - remove repository
