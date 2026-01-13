@@ -2,7 +2,7 @@ const simpleGit = require('simple-git');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
-const { escape } = require('shell-quote');
+const { quote } = require('shell-quote');
 const logger = require('./logger');
 const repositoryModel = require('../models/repository');
 
@@ -217,22 +217,21 @@ function createSnapshot(repoId, username, repoName, format = 'zip') {
       throw new Error('Invalid repository path');
     }
     
-    // Escape all arguments to prevent command injection
-    // shell-quote.escape() takes an array and returns escaped string
-    // We need to escape each argument separately
-    const escapedParentDir = escape([safeParentDir]);
-    const escapedRepoName = escape([safeRepoName]);
-    const escapedSnapshotPath = escape([safeSnapshotPath]);
+    // Quote all arguments to prevent command injection
+    // shell-quote.quote() takes an array and returns a properly quoted string
+    const quotedParentDir = quote([safeParentDir]);
+    const quotedRepoName = quote([safeRepoName]);
+    const quotedSnapshotPath = quote([safeSnapshotPath]);
     
-    // Build command with properly escaped arguments
+    // Build command with properly quoted arguments
     if (format === 'zip') {
-      const cmd = `cd ${escapedParentDir} && zip -r ${escapedSnapshotPath} ${escapedRepoName}`;
+      const cmd = `cd ${quotedParentDir} && zip -r ${quotedSnapshotPath} ${quotedRepoName}`;
       execSync(cmd, {
         stdio: 'pipe',
         shell: '/bin/bash'
       });
     } else if (format === 'tar.gz') {
-      const cmd = `cd ${escapedParentDir} && tar -czf ${escapedSnapshotPath} ${escapedRepoName}`;
+      const cmd = `cd ${quotedParentDir} && tar -czf ${quotedSnapshotPath} ${quotedRepoName}`;
       execSync(cmd, {
         stdio: 'pipe',
         shell: '/bin/bash'
