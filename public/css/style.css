@@ -475,6 +475,72 @@ button[type="submit"]:hover::before {
   transform: none;
 }
 
+/* Sorting Section */
+.sorting {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+}
+
+.sorting:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sort-controls label {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.sort-controls select {
+  padding: 0.5rem 2rem 0.5rem 0.875rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sort-controls select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.sort-controls select:hover {
+  border-color: var(--text-secondary);
+}
+
+.sort-direction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  min-width: 80px;
+}
+
+.sort-direction-btn .sort-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sort-direction-btn .sort-label {
+  font-size: 0.75rem;
+}
+
 /* Repositories Section */
 .repositories-header {
   display: flex;
@@ -966,5 +1032,18 @@ button[type="submit"]:hover::before {
     left: 1rem;
     right: 1rem;
     max-width: none;
+  }
+  
+  .sorting {
+    padding: 1rem;
+  }
+  
+  .sort-controls {
+    width: 100%;
+  }
+  
+  .sort-controls select {
+    flex: 1;
+    min-width: 120px;
   }
 }

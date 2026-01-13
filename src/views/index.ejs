@@ -98,6 +98,22 @@
 
     <div id="notificationContainer" class="notification-container"></div>
 
+    <section class="sorting">
+      <div class="sort-controls">
+        <label for="sortBy">Sort by:</label>
+        <select id="sortBy">
+          <option value="added">Added</option>
+          <option value="last-commit">Last Commit</option>
+          <option value="repo-name">Repo Name</option>
+          <option value="username">User Name</option>
+        </select>
+        <button id="sortDirection" class="btn btn-secondary sort-direction-btn" title="Toggle sort direction">
+          <span class="sort-icon">↓</span>
+          <span class="sort-label">Desc</span>
+        </button>
+      </div>
+    </section>
+
     <section class="repositories">
       <div class="repositories-header">
         <h2>Repositories</h2>
@@ -694,6 +710,98 @@
         button.textContent = 'Show README';
       }
     };
+
+    // Sorting functionality
+    const sortBySelect = document.getElementById('sortBy');
+    const sortDirectionBtn = document.getElementById('sortDirection');
+    const repositoriesList = document.getElementById('repositoriesList');
+    let sortAscending = false;
+
+    function sortRepositories() {
+      const sortBy = sortBySelect.value;
+      const widgets = Array.from(repositoriesList.querySelectorAll('.repository-widget'));
+      
+      widgets.sort((a, b) => {
+        let valueA, valueB;
+        
+        switch (sortBy) {
+          case 'last-commit':
+            valueA = a.dataset.lastCommit ? new Date(a.dataset.lastCommit).getTime() : 0;
+            valueB = b.dataset.lastCommit ? new Date(b.dataset.lastCommit).getTime() : 0;
+            break;
+          case 'added':
+            valueA = a.dataset.added ? new Date(a.dataset.added).getTime() : 0;
+            valueB = b.dataset.added ? new Date(b.dataset.added).getTime() : 0;
+            break;
+          case 'repo-name':
+            valueA = a.dataset.repoName || '';
+            valueB = b.dataset.repoName || '';
+            break;
+          case 'username':
+            valueA = a.dataset.username || '';
+            valueB = b.dataset.username || '';
+            break;
+          default:
+            return 0;
+        }
+        
+        let comparison = 0;
+        if (typeof valueA === 'string') {
+          comparison = valueA.localeCompare(valueB);
+        } else {
+          comparison = valueA - valueB;
+        }
+        
+        return sortAscending ? comparison : -comparison;
+      });
+      
+      widgets.forEach(widget => repositoriesList.appendChild(widget));
+    }
+
+    function updateSortDirectionButton() {
+      const icon = sortDirectionBtn.querySelector('.sort-icon');
+      const label = sortDirectionBtn.querySelector('.sort-label');
+      icon.textContent = sortAscending ? '↑' : '↓';
+      label.textContent = sortAscending ? 'Asc' : 'Desc';
+    }
+
+    sortBySelect.addEventListener('change', () => {
+      saveSortPreference();
+      sortRepositories();
+    });
+
+    sortDirectionBtn.addEventListener('click', () => {
+      sortAscending = !sortAscending;
+      updateSortDirectionButton();
+      saveSortPreference();
+      sortRepositories();
+    });
+
+    // Save and load sort preferences
+    function saveSortPreference() {
+      localStorage.setItem('giteroo_sort', JSON.stringify({
+        sortBy: sortBySelect.value,
+        ascending: sortAscending
+      }));
+    }
+
+    function loadSortPreference() {
+      try {
+        const saved = localStorage.getItem('giteroo_sort');
+        if (saved) {
+          const prefs = JSON.parse(saved);
+          sortBySelect.value = prefs.sortBy || 'added';
+          sortAscending = prefs.ascending || false;
+          updateSortDirectionButton();
+        }
+      } catch (e) {
+        console.error('Failed to load sort preference:', e);
+      }
+    }
+
+    // Initialize sorting
+    loadSortPreference();
+    sortRepositories();
   </script>
 </body>
 

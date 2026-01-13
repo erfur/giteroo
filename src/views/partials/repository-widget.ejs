@@ -1,4 +1,8 @@
-<div class="repository-widget" data-repo-id="<%= repo.id %>">
+<div class="repository-widget" data-repo-id="<%= repo.id %>" 
+     data-last-commit="<%= repo.last_commit_time ? repo.last_commit_time.toISOString() : '' %>"
+     data-added="<%= repo.created_at %>"
+     data-repo-name="<%= repo.repo_name.toLowerCase() %>"
+     data-username="<%= repo.username.toLowerCase() %>">
   <div class="repo-header">
     <h3>
       <%= repo.username %>/<%= repo.repo_name %>
